@@ -36,7 +36,7 @@ usage()
 
 plist()
 {
-  # capture SystemVersion in a variable
+  # catpure SystemVersion.plist in a variable
   FILE=$(cat "$SystemVersion")
 
   _GetHeadTail()
@@ -53,14 +53,22 @@ plist()
   _GetVal()
   {
     echo "$FILE" |
-    # -A1 gets 1 line after the matched string
-    grep -A1 "<key>$1</key>" |
-    # -n 2p prints the second line
-    sed -n '2p' |
-    sed "s|<$2>||; s|</$2>||" |
-    # xargs turns whitespaces into just spaces
-    xargs
+      # -A1 gets 1 line after the matched string
+      grep -A1 "<key>$1</key>" |
+      # -n 2p prints the second line
+      sed -n '2p' |
+      sed "s|<$2>||; s|</$2>||" |
+      # xargs turns whitespaces into just spaces
+      xargs
   }
+
+  # get XML version (has no real use except from verifying that Xml is valid)
+  XmlHead=$(echo "$FILE" | grep -o "<?xml .*?>" | sed "s|<?xml ||; s|?>||")
+  eval "$XmlHead"
+  
+  if [ ! "$version" ]; then
+    exit 1
+  fi
 
   # plist head/end
   _GetHeadTail plist &&
@@ -78,28 +86,30 @@ plist()
 main()
 {
   plist
-  if [ $# -gt 0 ]; then
-    while [ $# -gt 0 ]; do
-      case "$1" in
-        "-productName")
-          printf "ProductName: %s\n" "$ProductName"
-          ;;
-        "-productVersion")
-          printf "ProductVersion: %s\n" "$ProductVersion"
-          ;;
-        "-buildVersion")
-          printf "BuildVersion: %s\n" "$BuildVersion"
-          ;;
-        *)
-          usage
-          ;;
-      esac
-      shift
-    done
-  else
+
+  if [ $# -eq 0 ]; then
     printf "ProductName:    %s\n" "$ProductName"
     printf "ProductVersion: %s\n" "$ProductVersion"
     printf "BuildVersion:   %s\n" "$BuildVersion"
+    exit 0
   fi
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      "-productName")
+        printf "ProductName: %s\n" "$ProductName"
+        ;;
+      "-productVersion")
+        printf "ProductVersion: %s\n" "$ProductVersion"
+        ;;
+      "-buildVersion")
+        printf "BuildVersion: %s\n" "$BuildVersion"
+        ;;
+      *)
+        usage
+        ;;
+    esac
+    shift
+  done
 }
-main $@
+main $*

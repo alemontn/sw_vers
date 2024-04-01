@@ -1,7 +1,13 @@
 # sw_vers in shell
 An attempt of writing macOS's sw_vers in POSIX shell script
 
-> (this isn't meant to be used seriously)
+(this isn't meant to be used seriously)
+
+You can find an example of SystemVersion.plist
+[here](https://raw.githubusercontent.com/alemontn/sw_vers/main/SystemVersion.plist)
+
+By default, the file is placed in /etc/SystemVersion.plist
+but the location can be changed in the script
 
 ## Installation
 ```shell
