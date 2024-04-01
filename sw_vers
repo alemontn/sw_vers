@@ -1,0 +1,105 @@
+#!/bin/sh
+
+# SPDX-License-Identifier: BSD-2-Clause
+
+# Copyright (c) 2024 alemontn
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+
+#    1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#    2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+SystemVersion=/etc/SystemVersion.plist
+
+usage()
+{
+  printf "Usage: %s [-productName|-productVersion|-buildVersion]\n" $0 >&2
+  exit 1
+}
+
+plist()
+{
+  # capture SystemVersion in a variable
+  FILE=$(cat "$SystemVersion")
+
+  _GetHeadTail()
+  {
+    HEAD=$(echo "$FILE" | grep -o "<$1.*>")
+    TAIL=$(echo "$FILE" | grep -o "</$1>")
+  }
+
+  _SetFile()
+  {
+    FILE=$(echo "$FILE" | sed "s|.*$HEAD||; s|$TAIL.*||")
+  }
+
+  _GetVal()
+  {
+    echo "$FILE" |
+    # -A1 gets 1 line after the matched string
+    grep -A1 "<key>$1</key>" |
+    # -n 2p prints the second line
+    sed -n '2p' |
+    sed "s|<$2>||; s|</$2>||" |
+    # xargs turns whitespaces into just spaces
+    xargs
+  }
+
+  # plist head/end
+  _GetHeadTail plist &&
+    _SetFile
+
+  # sw_vers must be stored in a dictionary
+  _GetHeadTail dict &&
+    _SetFile
+  
+  ProductName=$(_GetVal "ProductName" string)
+  ProductVersion=$(_GetVal "ProductVersion" string)
+  BuildVersion=$(_GetVal "ProductBuildVersion" string)
+}
+
+main()
+{
+  plist
+  if [ $# -gt 0 ]; then
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        "-productName")
+          printf "ProductName: %s\n" "$ProductName"
+          ;;
+        "-productVersion")
+          printf "ProductVersion: %s\n" "$ProductVersion"
+          ;;
+        "-buildVersion")
+          printf "BuildVersion: %s\n" "$BuildVersion"
+          ;;
+        *)
+          usage
+          ;;
+      esac
+      shift
+    done
+  else
+    printf "ProductName:    %s\n" "$ProductName"
+    printf "ProductVersion: %s\n" "$ProductVersion"
+    printf "BuildVersion:   %s\n" "$BuildVersion"
+  fi
+}
+main $@
